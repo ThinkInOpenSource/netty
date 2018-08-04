@@ -383,6 +383,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         boolean selected = false;
         for (;;) {
             try {
+                // 原生的Java NIO标准注册流程，将this attch到Selector中，this为NioServerChannel实例
+                // 注册操作，这里注册只是注册，并没有设置对应事件
                 selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this);
                 return;
             } catch (CancelledKeyException e) {
@@ -417,6 +419,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         final int interestOps = selectionKey.interestOps();
         if ((interestOps & readInterestOp) == 0) {
+            // register0时并没有关注对应的读写事件，这里才真正关注对应的事件（比如SelectionKey.OP_ACCEPT）
             selectionKey.interestOps(interestOps | readInterestOp);
         }
     }

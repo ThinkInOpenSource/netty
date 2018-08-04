@@ -1421,6 +1421,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             ctx.fireChannelActive();
 
+            // .. -> .. -> 最后会调用到 AbstractNioChannel.doBeginRead
             readIfIsAutoRead();
         }
 

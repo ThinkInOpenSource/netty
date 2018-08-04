@@ -159,9 +159,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                                         boolean addTaskWakesUp, int maxPendingTasks,
                                         RejectedExecutionHandler rejectedHandler) {
         super(parent);
+
+        // addTaskWakesUp: 添加任务时是否唤醒线程
         this.addTaskWakesUp = addTaskWakesUp;
         this.maxPendingTasks = Math.max(16, maxPendingTasks);
         this.executor = ObjectUtil.checkNotNull(executor, "executor");
+
+        // 任务任务和对应的拒绝策略
         taskQueue = newTaskQueue(this.maxPendingTasks);
         rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler");
     }
@@ -401,6 +405,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         long runTasks = 0;
         long lastExecutionTime;
         for (;;) {
+            // 执行task
             safeExecute(task);
 
             runTasks ++;
@@ -844,7 +849,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     /**
      * Offers the task to the associated {@link RejectedExecutionHandler}.
-     *
+     * 执行拒绝策略
      * @param task to reject.
      */
     protected final void reject(Runnable task) {
@@ -857,6 +862,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private void startThread() {
         if (state == ST_NOT_STARTED) {
+            // CAS保证一个SingleThreadEventExecutor只会创建一个Thread
             if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
                 try {
                     doStartThread();
@@ -868,11 +874,16 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
     }
 
+    /**
+     * 开启SingleThreadEventExecutor(NioEventLoop)所属的线程，注意，线程启动不是在new NioEventLoop()就启动的。
+     * 比如是bossGroup，则在其bind时创建对应线程；如果是workerGroup，则在其接收到第一个请求register时进行。
+     */
     private void doStartThread() {
         assert thread == null;
         executor.execute(new Runnable() {
             @Override
             public void run() {
+                // 这种方式还是挺新颖的，不先创建Thread复制给thread，而是先启动Thread，在run()中将该线程复制给thread
                 thread = Thread.currentThread();
                 if (interrupted) {
                     thread.interrupt();
@@ -881,6 +892,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 boolean success = false;
                 updateLastExecutionTime();
                 try {
+                    // 执行NioEventLoop.run方法
                     SingleThreadEventExecutor.this.run();
                     success = true;
                 } catch (Throwable t) {

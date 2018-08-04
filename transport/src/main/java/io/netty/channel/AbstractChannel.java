@@ -479,6 +479,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     eventLoop.execute(new Runnable() {
                         @Override
                         public void run() {
+//                            System.out.println("[" + Thread.currentThread().getName() + "] : " + "invoke register0");
                             register0(promise);
                         }
                     });
@@ -501,14 +502,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     return;
                 }
                 boolean firstRegistration = neverRegistered;
+                // 这里调用的是AbstractNioChannel.doRegister
+                // 这里将channel注册上去，并没有关注对应的事件（read/write事件）
                 doRegister();
                 neverRegistered = false;
                 registered = true;
 
                 // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
                 // user may already fire events through the pipeline in the ChannelFutureListener.
+                // 调用handlerAdd事件，这里就会调用initChannel方法
                 pipeline.invokeHandlerAddedIfNeeded();
 
+                // 调用operationComplete回调
                 safeSetSuccess(promise);
                 pipeline.fireChannelRegistered();
                 // Only fire a channelActive if the channel has never been registered. This prevents firing
@@ -563,9 +568,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             if (!wasActive && isActive()) {
+//                System.out.println("[" + Thread.currentThread().getName() + "] : " + "add channelActive任务");
+                // 添加ChannelActive任务
                 invokeLater(new Runnable() {
                     @Override
                     public void run() {
+//                        System.out.println("[" + Thread.currentThread().getName() + "] : " + "pipeline.fireChannelActive()");
                         pipeline.fireChannelActive();
                     }
                 });
