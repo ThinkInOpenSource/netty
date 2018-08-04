@@ -222,8 +222,6 @@ public class ChunkedWriteHandlerTest {
         ch.writeAndFlush(input).syncUninterruptibly();
         ch.checkException();
         assertTrue(ch.finish());
-
-        assertEquals(0, ch.readOutbound());
         assertNull(ch.readOutbound());
     }
 
