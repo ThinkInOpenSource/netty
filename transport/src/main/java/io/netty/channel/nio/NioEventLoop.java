@@ -504,8 +504,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     // 处理IO事件
     private void processSelectedKeys() {
         if (selectedKeys != null) {
+            // 经过优化的select处理，底层是使用数组来保存SelectionKey的
             processSelectedKeysOptimized();
         } else {
+            // JKD默认使用Set来保存SelectionKey的
             processSelectedKeysPlain(selector.selectedKeys());
         }
     }
@@ -609,6 +611,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    /**
+     * 处理IO事件
+     */
     private void processSelectedKey(SelectionKey k, AbstractNioChannel ch) {
         final AbstractNioChannel.NioUnsafe unsafe = ch.unsafe();
         if (!k.isValid()) {
@@ -638,24 +643,25 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             // We first need to call finishConnect() before try to trigger a read(...) or write(...) as otherwise
             // the NIO JDK channel implementation may throw a NotYetConnectedException.
             if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
-                // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
-                // See https://github.com/netty/netty/issues/924
+                // OP_CONNECT事件，client连接上客户端时触发的事件
                 int ops = k.interestOps();
                 ops &= ~SelectionKey.OP_CONNECT;
                 k.interestOps(ops);
 
+                // 触发finishConnect事件，其中就包括fireChannelActive事件
                 unsafe.finishConnect();
             }
 
             // Process OP_WRITE first as we may be able to write some queued buffers and so free memory.
             if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                // Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to write
+                // 写事件
                 ch.unsafe().forceFlush();
             }
 
-            // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
-            // to a spin loop
+            // 读事件、ACCEPT事件
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
+                // 注意，这里读事件和ACCEPT事件对应的unsafe实例是不一样的
+                // 读事件 -> NioByteUnsafe,  ACCEPT事件 -> NioMessageUnsafe
                 unsafe.read();
             }
         } catch (CancelledKeyException ignored) {
@@ -778,13 +784,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     selector.selectNow();
                     selectCnt = 1;
                     break;
-                }
-
-                if (inEventLoop()) {
-                    Date currentTime = new Date();
-                    addTask(() -> {
-                        System.out.println(new Date() + " hello world " + currentTime);
-                    });
                 }
 
                 // 超时阻塞select

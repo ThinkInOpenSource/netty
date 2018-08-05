@@ -33,7 +33,7 @@ public class ClientMain {
             });
 
             // Start the client.
-            ChannelFuture f = b.connect("localhost", 8081).sync();
+            ChannelFuture f = b.connect("localhost", 60001).sync();
             f.channel().closeFuture().sync();
         } catch (Exception e) {
           e.printStackTrace();

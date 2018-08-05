@@ -72,6 +72,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             try {
                 try {
                     do {
+                        // 调用java socket的accept方法，接收请求
                         int localRead = doReadMessages(readBuf);
                         if (localRead == 0) {
                             break;
@@ -81,6 +82,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                             break;
                         }
 
+                        // 增加统计计数
                         allocHandle.incMessagesRead(localRead);
                     } while (allocHandle.continueReading());
                 } catch (Throwable t) {
@@ -90,6 +92,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 int size = readBuf.size();
                 for (int i = 0; i < size; i ++) {
                     readPending = false;
+                    // 触发fireChannelRead
                     pipeline.fireChannelRead(readBuf.get(i));
                 }
                 readBuf.clear();
