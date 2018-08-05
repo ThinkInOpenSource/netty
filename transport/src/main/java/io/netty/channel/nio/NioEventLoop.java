@@ -38,11 +38,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -406,6 +402,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     protected void run() {
         for (;;) {
             try {
+                /*
+                 * 如果hasTasks，则调用selector.selectNow()，非阻塞方式获取channel事件，没有channel事件时可能返回为0。
+                 * 这里用非阻塞方式是为了尽快获取连接事件，然后处理连接事件和内部任务。
+                 */
                 switch (selectStrategy.calculateStrategy(selectNowSupplier, hasTasks())) {
                     case SelectStrategy.CONTINUE:
                         continue;
@@ -449,6 +449,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
                 cancelledKeys = 0;
                 needsToSelectAgain = false;
+
+                /*
+                 * ioRatio调节连接事件和内部任务执行事件百分比
+                 * ioRatio越大，连接事件处理占用百分比越大
+                 */
                 final int ioRatio = this.ioRatio;
                 if (ioRatio == 100) {
                     try {
@@ -496,6 +501,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    // 处理IO事件
     private void processSelectedKeys() {
         if (selectedKeys != null) {
             processSelectedKeysOptimized();
@@ -571,6 +577,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    /**
+     * 优化过的版本有事件发生的selectKey存放在数组selectedKeys中，通过遍历selectedKeys，处理每一个selectKey
+     */
     private void processSelectedKeysOptimized() {
         for (int i = 0; i < selectedKeys.size; ++i) {
             final SelectionKey k = selectedKeys.keys[i];
@@ -581,6 +590,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             final Object a = k.attachment();
 
             if (a instanceof AbstractNioChannel) {
+                // 处理IO事件
                 processSelectedKey(k, (AbstractNioChannel) a);
             } else {
                 @SuppressWarnings("unchecked")
@@ -719,6 +729,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     int selectNow() throws IOException {
         try {
+            // 不会阻塞，不管什么通道就绪都立刻返回
+            // 此方法执行非阻塞的选择操作。如果自从前一次选择操作后，没有通道变成可选择的，则此方法直接返回零。
             return selector.selectNow();
         } finally {
             // restore wakeup state if needed
@@ -728,14 +740,27 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    /**
+     * 这个方法解决了Nio中臭名昭著的bug：selector的select方法导致cpu100%。
+     */
     private void select(boolean oldWakenUp) throws IOException {
         Selector selector = this.selector;
         try {
             int selectCnt = 0;
             long currentTimeNanos = System.nanoTime();
+
+            /*
+             * delayNanos(currentTimeNanos)：计算延迟任务队列中第一个任务的到期执行时间（即最晚还能延迟多长时间执行），默认返回1s。
+             * 每个SingleThreadEventExecutor都持有一个延迟执行任务的优先队列PriorityQueue，启动线程时，往队列中加入一个任务。
+             */
             long selectDeadLineNanos = currentTimeNanos + delayNanos(currentTimeNanos);
 
             for (;;) {
+                /*
+                 * 如果延迟任务队列中第一个任务的最晚还能延迟执行的时间小于500000纳秒，
+                 * 且selectCnt == 0（selectCnt 用来记录selector.select方法的执行次数和标识是否执行过selector.selectNow()），
+                 * 则执行selector.selectNow()方法并立即返回。
+                 */
                 long timeoutMillis = (selectDeadLineNanos - currentTimeNanos + 500000L) / 1000000L;
                 if (timeoutMillis <= 0) {
                     if (selectCnt == 0) {
@@ -755,9 +780,18 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     break;
                 }
 
+                if (inEventLoop()) {
+                    Date currentTime = new Date();
+                    addTask(() -> {
+                        System.out.println(new Date() + " hello world " + currentTime);
+                    });
+                }
+
+                // 超时阻塞select
                 int selectedKeys = selector.select(timeoutMillis);
                 selectCnt ++;
 
+                // 有事件到来 | 被唤醒 | 有内部任务 | 有定时任务时，会返回
                 if (selectedKeys != 0 || oldWakenUp || wakenUp.get() || hasTasks() || hasScheduledTasks()) {
                     // - Selected something,
                     // - waken up by user, or
@@ -783,15 +817,18 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 long time = System.nanoTime();
                 if (time - TimeUnit.MILLISECONDS.toNanos(timeoutMillis) >= currentTimeNanos) {
                     // timeoutMillis elapsed without anything selected.
+                    // 阻塞超时后没有事件到来，重置selectCnt
                     selectCnt = 1;
                 } else if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
                         selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
                     // The selector returned prematurely many times in a row.
-                    // Rebuild the selector to work around the problem.
+                    // Rebuild the selector to work around the problem. NIO bug!!!
+                    // SELECTOR_AUTO_REBUILD_THRESHOLD默认512
                     logger.warn(
                             "Selector.select() returned prematurely {} times in a row; rebuilding Selector {}.",
                             selectCnt, selector);
 
+                    // Selector重建
                     rebuildSelector();
                     selector = this.selector;
 

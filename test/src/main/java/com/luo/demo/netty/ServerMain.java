@@ -25,7 +25,7 @@ public class ServerMain {
             ServerBootstrap boot = new ServerBootstrap();
             boot.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class) // NioChannel方式
-                    .localAddress(8081)
+                    .localAddress(60000)
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
