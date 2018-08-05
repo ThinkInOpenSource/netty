@@ -9,6 +9,9 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
+import java.util.*;
+import java.util.stream.Collectors;
+
 /**
  * netty server
  *
@@ -18,7 +21,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 public class ServerMain {
 
     public static void main(String[] args) {
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+        EventLoopGroup bossGroup = new NioEventLoopGroup(4);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 
         try {

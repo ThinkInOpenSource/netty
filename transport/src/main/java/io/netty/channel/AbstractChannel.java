@@ -459,6 +459,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final void register(EventLoop eventLoop, final ChannelPromise promise) {
+//            System.out.println("[" + Thread.currentThread().getName() + "] : " + "register(EventLoop eventLoop, final ChannelPromise promise)");
             if (eventLoop == null) {
                 throw new NullPointerException("eventLoop");
             }
