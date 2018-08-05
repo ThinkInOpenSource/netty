@@ -591,6 +591,7 @@ public final class PlatformDependent {
     public static ByteBuffer allocateDirectNoCleaner(int capacity) {
         assert USE_DIRECT_BUFFER_NO_CLEANER;
 
+        // 增加内存使用统计，内部会进行内存使用判断
         incrementMemoryCounter(capacity);
         try {
             return PlatformDependent0.allocateDirectNoCleaner(capacity);

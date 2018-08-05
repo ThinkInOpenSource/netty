@@ -64,6 +64,10 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
                     "initialCapacity(%d) > maxCapacity(%d)", initialCapacity, maxCapacity));
         }
 
+        /**
+         * allocateDirect(initialCapacity) 分配内存
+         * setByteBuffer(xx, xx) 设置UnpooledUnsafeDirectByteBuf属性
+         */
         this.alloc = alloc;
         setByteBuffer(allocateDirect(initialCapacity), false);
     }

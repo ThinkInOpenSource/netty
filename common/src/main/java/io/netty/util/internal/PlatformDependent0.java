@@ -430,6 +430,7 @@ final class PlatformDependent0 {
         // Calling malloc with capacity of 0 may return a null ptr or a memory address that can be used.
         // Just use 1 to make it safe to use in all cases:
         // See: http://pubs.opengroup.org/onlinepubs/009695399/functions/malloc.html
+        // 调用UNSAFE.allocateMemory进行内存分配操作
         return newDirectBuffer(UNSAFE.allocateMemory(Math.max(1, capacity)), capacity);
     }
 
@@ -451,6 +452,7 @@ final class PlatformDependent0 {
         ObjectUtil.checkPositiveOrZero(capacity, "capacity");
 
         try {
+            // 反射创建 DirectByteBuffer 实例
             return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(address, capacity);
         } catch (Throwable cause) {
             // Not expected to ever throw!
