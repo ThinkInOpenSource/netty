@@ -32,9 +32,9 @@ public class IdleMain {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
                             ch.pipeline()
-                                    .addLast(new MyIdleStateHandler())
                                     .addLast(new IdleStateHandler(5, 0,
-                                            0, TimeUnit.SECONDS));
+                                            0, TimeUnit.SECONDS))
+                                    .addLast(new MyIdleStateHandler());
                         }
                     });
 
