@@ -268,6 +268,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         // before channelActive() event is fired.  If a user adds this handler
         // after the channelActive() event, initialize() will be called by beforeAdd().
         initialize(ctx);
+        // 透传到下一个channelHandler
         super.channelActive(ctx);
     }
 
@@ -283,6 +284,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
             reading = true;
             firstReaderIdleEvent = firstAllIdleEvent = true;
         }
+        // 交给下一个channelHanlder
         ctx.fireChannelRead(msg);
     }
 
@@ -314,9 +316,11 @@ public class IdleStateHandler extends ChannelDuplexHandler {
             return;
         }
 
+        // 防止重复initialize
         state = 1;
         initOutputChanged(ctx);
 
+        // 根据配置添加延时任务
         lastReadTime = lastWriteTime = ticksInNanos();
         if (readerIdleTimeNanos > 0) {
             readerIdleTimeout = schedule(ctx, new ReaderIdleTimeoutTask(ctx),
@@ -483,13 +487,14 @@ public class IdleStateHandler extends ChannelDuplexHandler {
             }
 
             if (nextDelay <= 0) {
-                // Reader is idle - set a new timeout and notify the callback.
+                // 超时时间到了 Reader is idle - set a new timeout and notify the callback.
                 readerIdleTimeout = schedule(ctx, this, readerIdleTimeNanos, TimeUnit.NANOSECONDS);
 
                 boolean first = firstReaderIdleEvent;
                 firstReaderIdleEvent = false;
 
                 try {
+                    // 触发fireUserEventTriggered回调
                     IdleStateEvent event = newIdleStateEvent(IdleState.READER_IDLE, first);
                     channelIdle(ctx, event);
                 } catch (Throwable t) {

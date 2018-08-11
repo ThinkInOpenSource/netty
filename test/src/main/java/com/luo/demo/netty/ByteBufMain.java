@@ -10,6 +10,8 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 public class ByteBufMain {
 
     public static void main(String[] args) {
+
+        // 无参数的工厂方法，还可以，调用buffer(int initialCapacity, int maxCapacity) 来指定初始化和最大容量限制。
         ByteBuf byteBuf = UnpooledByteBufAllocator.DEFAULT.buffer();
 
         byteBuf.writeByte(3);
@@ -26,6 +28,7 @@ public class ByteBufMain {
         // 清空索引值置0
         byteBuf.clear();
 
+        //循环写入257个字节，超过了默认初始化容量256的限制，则会触发扩容操作。
         for (int i = 0; i < 257; i++) {
             byteBuf.writeByte(i);
         }

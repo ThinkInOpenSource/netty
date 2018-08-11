@@ -89,6 +89,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     /**
      * @see #pollScheduledTask(long)
+     * 获取任务
      */
     protected final Runnable pollScheduledTask() {
         return pollScheduledTask(nanoTime());
@@ -143,6 +144,9 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         return scheduledTask != null && scheduledTask.deadlineNanos() <= nanoTime();
     }
 
+    /**
+     * 添加延时任务
+     */
     @Override
     public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
         ObjectUtil.checkNotNull(command, "command");
