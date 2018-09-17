@@ -17,7 +17,7 @@ public class EchoHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         ByteBuf in = (ByteBuf) msg;
 
-        System.out.println("[" + Thread.currentThread().getName() + "] : recv: " + in.toString(CharsetUtil.UTF_8));
+        System.out.println("recv: " + in.toString(CharsetUtil.UTF_8));
         ctx.write(msg);
     }
 
